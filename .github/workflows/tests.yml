@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+
   pull_request:
     branches:
       - main
@@ -29,6 +30,8 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run unit and API tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest tests/test_pdf_processor.py
           pytest tests/test_rag.py
