@@ -10,7 +10,23 @@ MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 CHROMA_PATH = "data/chroma"
 
-embedding_model = SentenceTransformer(MODEL_NAME)
+from sentence_transformers import SentenceTransformer
+
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+
+embedding_model = None
+
+
+def get_embedding_model():
+    global embedding_model
+
+    if embedding_model is None:
+        embedding_model = SentenceTransformer(
+            MODEL_NAME,
+            device="cpu"
+        )
+
+    return embedding_model
 
 chroma_client = chromadb.PersistentClient(
     path=CHROMA_PATH
@@ -60,7 +76,7 @@ def chunk_text(
 
 def generate_embeddings(texts: list[str]):
 
-    embeddings = embedding_model.encode(
+    embeddings = get_embedding_model().encode(
         texts,
         normalize_embeddings=True
     )
