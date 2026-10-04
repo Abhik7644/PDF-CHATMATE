@@ -1,3 +1,6 @@
+import os
+import psutil
+
 from pydantic import BaseModel
 from backend.rag import (
   search_documents,
@@ -13,9 +16,17 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from pathlib import Path
 from backend.pdf_processor import extract_text_from_pdf
 
+process = psutil.Process(os.getpid())
+
+def log_memory(label):
+    memory_mb = process.memory_info().rss / (1024 * 1024)
+    print(f"[MEMORY] {label}: {memory_mb:.2f} MB")
+
+    
 
 app = FastAPI(title="PDF ChatMate")
 
+log_memory("Backend startup")
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -33,6 +44,8 @@ def home():
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
 
+    log_memory("Upload - start")
+
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=400,
@@ -46,8 +59,11 @@ async def upload_pdf(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         buffer.write(await file.read())
 
+
     # Extract text
     text = extract_text_from_pdf(str(file_path))
+
+    log_memory("Upload - after PDF extraction")
 
     if not text.strip():
         raise HTTPException(
@@ -58,11 +74,14 @@ async def upload_pdf(file: UploadFile = File(...)):
     # Create chunks
     chunks = chunk_text(text)
 
+    log_memory("Upload - after chunking")
+
     # Store chunks and embeddings
     add_document(
         pdf_id=pdf_id,
         chunks=chunks
     )
+    log_memory("Upload - after RAG indexing")
 
     return {
         "pdf_id": pdf_id,
@@ -86,6 +105,8 @@ async def summarize_pdf(file: UploadFile = File(...)):
 
     text = extract_text_from_pdf(str(file_path))
 
+    log_memory("Summarize - after PDF extraction")
+
     if not text.strip():
         raise HTTPException(
             status_code=400,
@@ -93,6 +114,8 @@ async def summarize_pdf(file: UploadFile = File(...)):
         )
 
     summary = summarize_text(text)
+
+    log_memory("Summarize - after Groq response")
 
     return {
         "filename": file.filename,
@@ -108,6 +131,9 @@ async def chat(request: ChatRequest):
         pdf_id=request.pdf_id,
         top_k=5
     )
+
+    log_memory("Chat - after RAG retrieval")
+    
 
     documents = results["documents"][0]
 
@@ -125,6 +151,7 @@ async def chat(request: ChatRequest):
         question=request.question,
         context=context
     )
+    log_memory("Chat - after Groq response")
 
     return {
         "pdf_id": request.pdf_id,

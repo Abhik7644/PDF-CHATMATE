@@ -5,3 +5,4 @@ PyMuPDF
 groq
 chromadb
 python-dotenv
+psutil
