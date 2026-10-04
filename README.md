@@ -124,3 +124,29 @@ Configuration
 3. Install dependencies using `pip install -r requirements.txt`.
 4. Create a `.env` file and add your `GROQ_API_KEY`.
 5. Start the FastAPI backend with `python -m uvicorn backend.main:app --reload` and the Streamlit frontend with `streamlit run frontend.py`.
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration.
+
+On every push or pull request to `main`, the pipeline runs:
+
+- PDF processing tests
+- RAG tests
+- FastAPI API tests
+- Selenium end-to-end tests
+
+Deployment is configured on Render to occur **only after the GitHub Actions CI checks pass**.
+
+### Pipeline
+
+```text
+Code Push
+   ↓
+GitHub Actions
+   ↓
+Automated Tests
+   ↓
+All Tests Pass
+   ↓
+Render Deployment
