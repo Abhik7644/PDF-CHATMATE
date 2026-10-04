@@ -12,37 +12,33 @@ def get_groq_client():
 
 
 def summarize_text(text: str) -> str:
+    client = get_groq_client()
 
-    prompt = f"""
-You are a document summarization assistant.
+    # Keep the request safely below Groq's token limit.
+    # Approx. 4 characters ≈ 1 token.
+    max_chars = 18000
+    text = text[:max_chars]
 
-Summarize the following PDF content clearly and concisely.
-
-Focus on:
-- Main topic
-- Important points
-- Key findings
-- Important conclusions
-
-Do not invent information that is not present in the document.
-
-PDF CONTENT:
-{text}
-"""
-    client=get_groq_client()
     response = client.chat.completions.create(
         model="openai/gpt-oss-120b",
+        temperature=0.2,
         messages=[
             {
+                "role": "system",
+                "content": (
+                    "You are a document summarization assistant. "
+                    "Summarize the provided document clearly and concisely. "
+                    "Focus on the main topics, key concepts, and important details."
+                )
+            },
+            {
                 "role": "user",
-                "content": prompt
+                "content": f"Summarize this document:\n\n{text}"
             }
-        ],
-        temperature=0.2
+        ]
     )
 
     return response.choices[0].message.content
-
 def answer_question(question: str, context: str) -> str:
 
     prompt = f"""
