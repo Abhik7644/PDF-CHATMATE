@@ -1,33 +1,37 @@
+import os
+
 import chromadb
-from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+import cohere
+from dotenv import load_dotenv
 
+load_dotenv()
 
-# -----------------------------
-# Configuration
-# -----------------------------
 
 CHROMA_PATH = "data/chroma"
-
-
-# -----------------------------
-# ChromaDB Setup
-# -----------------------------
 
 chroma_client = chromadb.PersistentClient(
     path=CHROMA_PATH
 )
 
-embedding_function = DefaultEmbeddingFunction()
-
 collection = chroma_client.get_or_create_collection(
-    name="pdf_documents",
-    embedding_function=embedding_function
+    name="pdf_documents_cohere",
+    configuration={
+        "hnsw": {
+            "space": "cosine"
+        }
+    }
 )
 
 
-# -----------------------------
-# Text Chunking
-# -----------------------------
+cohere_client = cohere.ClientV2(
+    api_key=os.getenv("COHERE_API_KEY")
+)
+
+
+EMBEDDING_MODEL = "embed-v4.0"
+EMBEDDING_DIMENSION = 1024
+BATCH_SIZE = 96
+
 
 def chunk_text(
     text: str,
@@ -41,7 +45,6 @@ def chunk_text(
         )
 
     chunks = []
-
     start = 0
 
     while start < len(text):
@@ -58,14 +61,39 @@ def chunk_text(
     return chunks
 
 
-# -----------------------------
-# Store Document
-# -----------------------------
+def generate_embeddings(
+    texts: list[str],
+    input_type: str
+) -> list[list[float]]:
+
+    embeddings = []
+
+    for i in range(0, len(texts), BATCH_SIZE):
+
+        batch = texts[i:i + BATCH_SIZE]
+
+        response = cohere_client.embed(
+            model=EMBEDDING_MODEL,
+            texts=batch,
+            input_type=input_type,
+            output_dimension=EMBEDDING_DIMENSION,
+            embedding_types=["float"]
+        )
+
+        embeddings.extend(response.embeddings.float)
+
+    return embeddings
+
 
 def add_document(
     pdf_id: str,
     chunks: list[str]
 ):
+
+    embeddings = generate_embeddings(
+        chunks,
+        input_type="search_document"
+    )
 
     ids = [
         f"{pdf_id}_{i}"
@@ -83,13 +111,10 @@ def add_document(
     collection.add(
         ids=ids,
         documents=chunks,
+        embeddings=embeddings,
         metadatas=metadatas
     )
 
-
-# -----------------------------
-# Search Documents
-# -----------------------------
 
 def search_documents(
     query: str,
@@ -97,8 +122,13 @@ def search_documents(
     top_k: int = 5
 ):
 
+    query_embedding = generate_embeddings(
+        [query],
+        input_type="search_query"
+    )[0]
+
     results = collection.query(
-        query_texts=[query],
+        query_embeddings=[query_embedding],
         n_results=top_k,
         where={
             "pdf_id": pdf_id
