@@ -18,6 +18,8 @@ API_URL = os.getenv(
     "http://127.0.0.1:8000"
 )
 
+st.write("Backend URL:", API_URL)
+
 
 # =========================================================
 # CUSTOM CSS
