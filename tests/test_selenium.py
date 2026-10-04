@@ -1,5 +1,5 @@
 import os
-
+import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -26,7 +26,7 @@ def test_pdf_chat_end_to_end():
         # 1. Wait for application
         wait.until(
             EC.presence_of_element_located(
-                (By.XPATH, "//h1")
+                (By.XPATH, "//*[contains(text(), 'PDF ChatMate')]")
             )
         )
 
@@ -41,10 +41,11 @@ def test_pdf_chat_end_to_end():
         pdf_path = os.path.abspath("tests/test.pdf")
         file_input.send_keys(pdf_path)
 
+        time.sleep(2)
         # 4. Click Upload PDF
         upload_button = wait.until(
             EC.element_to_be_clickable(
-                (By.XPATH, "//button[contains(., 'Upload PDF')]")
+                (By.XPATH, "//button[contains(., 'Upload & Process PDF')]")
             )
         )
 
@@ -55,7 +56,7 @@ def test_pdf_chat_end_to_end():
             EC.presence_of_element_located(
                 (
                     By.XPATH,
-                    "//*[contains(text(), 'PDF uploaded successfully')]"
+                    "//*[contains(text(), 'Document Status')]"
                 )
             )
         )
