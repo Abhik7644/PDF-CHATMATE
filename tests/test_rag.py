@@ -4,6 +4,30 @@ import chromadb
 import backend.rag as rag
 from backend.rag import chunk_text, add_document, search_documents
 
+def fake_embeddings(texts, input_type):
+    embeddings = []
+
+    for text in texts:
+        vector = [0.0] * 1024
+
+        text_lower = text.lower()
+
+        if "selenium" in text_lower or "browser automation" in text_lower:
+            vector[0] = 1.0
+
+        if "docker" in text_lower or "containerization" in text_lower:
+            vector[1] = 1.0
+
+        if "python" in text_lower or "backend" in text_lower:
+            vector[2] = 1.0
+
+        if "chromadb" in text_lower or "vector database" in text_lower:
+            vector[3] = 1.0
+
+        embeddings.append(vector)
+
+    return embeddings
+
 
 def test_chunk_text():
     text = "A" * 2500
@@ -47,6 +71,11 @@ def test_retrieval_returns_relevant_chunk(monkeypatch):
         "Selenium is used for browser automation.",
         "ChromaDB is used as a vector database."
     ]
+    monkeypatch.setattr(
+        rag,
+        "generate_embeddings",
+        fake_embeddings
+    )
 
     add_document(
         pdf_id="test-doc",
@@ -74,6 +103,11 @@ def test_retrieval_filters_by_pdf_id(monkeypatch):
     )
 
     monkeypatch.setattr(rag, "collection", collection)
+    monkeypatch.setattr(
+        rag,
+        "generate_embeddings",
+        fake_embeddings
+    )
 
     add_document(
         pdf_id="pdf-1",

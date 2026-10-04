@@ -23,10 +23,25 @@ collection = chroma_client.get_or_create_collection(
 )
 
 
-cohere_client = cohere.ClientV2(
-    api_key=os.getenv("COHERE_API_KEY")
-)
+cohere_client = None
 
+
+def get_cohere_client():
+    global cohere_client
+
+    if cohere_client is None:
+        api_key = os.getenv("COHERE_API_KEY")
+
+        if not api_key:
+            raise RuntimeError(
+                "COHERE_API_KEY is not configured."
+            )
+
+        cohere_client = cohere.ClientV2(
+            api_key=api_key
+        )
+
+    return cohere_client
 
 EMBEDDING_MODEL = "embed-v4.0"
 EMBEDDING_DIMENSION = 1024
@@ -68,11 +83,15 @@ def generate_embeddings(
 
     embeddings = []
 
+    client = get_cohere_client()
+
     for i in range(0, len(texts), BATCH_SIZE):
 
         batch = texts[i:i + BATCH_SIZE]
 
-        response = cohere_client.embed(
+        
+
+        response = client.embed(
             model=EMBEDDING_MODEL,
             texts=batch,
             input_type=input_type,
